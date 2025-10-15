@@ -87,28 +87,31 @@ class MainActivity : AppCompatActivity() {
         
         // Capture screen and analyze
         ScreenCaptureHelper.captureScreen(this) { bitmap ->
-            if (bitmap != null) {
-                val prefs = getSharedPreferences("calibration", MODE_PRIVATE)
-                val boardLeft = prefs.getInt("board_left", -1)
-                if (boardLeft == -1) {
-                    runOnUiThread { statusText.text = "Please calibrate first" }
-                    return@captureScreen
-                }
-                val boardTop = prefs.getInt("board_top", 0)
-                val boardRight = prefs.getInt("board_right", 0)
-                val boardBottom = prefs.getInt("board_bottom", 0)
-                val boardRect = android.graphics.Rect(boardLeft, boardTop, boardRight, boardBottom)
+            try {
+                if (bitmap != null) {
+                    val prefs = getSharedPreferences("calibration", MODE_PRIVATE)
+                    val boardLeft = prefs.getInt("board_left", -1)
+                    if (boardLeft == -1) {
+                        runOnUiThread { statusText.text = "Please calibrate first" }
+                        return@captureScreen
+                    }
+                    val boardTop = prefs.getInt("board_top", 0)
+                    val boardRight = prefs.getInt("board_right", 0)
+                    val boardBottom = prefs.getInt("board_bottom", 0)
+                    val boardRect = android.graphics.Rect(boardLeft, boardTop, boardRight, boardBottom)
 
-                val board = BoardExtractor.extractBoard8x8Adaptive(bitmap, boardRect)
-                val (placements, cleared) = Solver.computeGreedyBestCells(board, 3)
+                    val board = BoardExtractor.extractBoard8x8Adaptive(bitmap, boardRect)
+                    val (placements, cleared) = Solver.computeGreedyBestCells(board, 3)
 
-                // Update overlay if running
-                OverlayServiceController.updateOverlay(this, placements, cleared)
-                runOnUiThread { statusText.text = "Updated suggestions (${placements.size})" }
-            } else {
-                runOnUiThread {
-                    statusText.text = "Capture failed"
+                    // Update overlay if running
+                    OverlayServiceController.updateOverlay(this, placements, cleared)
+                    runOnUiThread { statusText.text = "Updated suggestions (${placements.size})" }
+                } else {
+                    runOnUiThread { statusText.text = "Capture failed" }
                 }
+            } catch (t: Throwable) {
+                android.util.Log.e("MainActivity", "analyzeScreen crash", t)
+                runOnUiThread { statusText.text = "Analyze error: ${t.javaClass.simpleName}" }
             }
         }
     }
@@ -141,9 +144,11 @@ class MainActivity : AppCompatActivity() {
     private fun launchBlockBlastGame() {
         // Heuristic known package names; user can adjust package in settings later
         val candidates = listOf(
-            "com.blockblast.puzzle", // example placeholder
+            // Confirmed package for "Block Blast!"
             "com.blockblastgame.puzzle",
-            "com.block.blaster" // fallback guesses
+            // Fallback guesses for variants/clones
+            "com.blockblast.puzzle",
+            "com.block.blaster"
         )
         for (pkg in candidates) {
             val launch = packageManager.getLaunchIntentForPackage(pkg)
@@ -164,18 +169,23 @@ class MainActivity : AppCompatActivity() {
         }
         statusText.text = "Auto-calibrating..."
         ScreenCaptureHelper.captureScreen(this) { bmp ->
-            if (bmp != null) {
-                val ok = AutoCalibrator.autoCalibrateAndSave(applicationContext, bmp)
-                runOnUiThread {
-                    if (ok) {
-                        statusText.text = "Calibration detected"
-                        OverlayServiceController.startAnalyzeLoop(applicationContext)
-                    } else {
-                        statusText.text = "Auto-calibration failed. Use Calibrate."
+            try {
+                if (bmp != null) {
+                    val ok = AutoCalibrator.autoCalibrateAndSave(applicationContext, bmp)
+                    runOnUiThread {
+                        if (ok) {
+                            statusText.text = "Calibration detected"
+                            OverlayServiceController.startAnalyzeLoop(applicationContext)
+                        } else {
+                            statusText.text = "Auto-calibration failed. Use Calibrate."
+                        }
                     }
+                } else {
+                    runOnUiThread { statusText.text = "Capture failed for calibration" }
                 }
-            } else {
-                runOnUiThread { statusText.text = "Capture failed for calibration" }
+            } catch (t: Throwable) {
+                android.util.Log.e("MainActivity", "autoCalibrate crash", t)
+                runOnUiThread { statusText.text = "Auto-calibration error: ${t.javaClass.simpleName}" }
             }
         }
     }
@@ -219,8 +229,12 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_POST_NOTIFICATIONS) {
-            // Retry starting overlay regardless; if denied, user can still see limited behavior
-            startOverlay()
+            val granted = grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                startOverlay()
+            } else {
+                Toast.makeText(this, "Notification permission is required for overlay service", Toast.LENGTH_LONG).show()
+            }
         }
     }
 

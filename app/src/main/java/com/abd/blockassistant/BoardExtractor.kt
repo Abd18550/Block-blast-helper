@@ -15,14 +15,25 @@ object BoardExtractor {
      */
     fun extractBoard8x8Adaptive(bitmap: Bitmap, boardRect: Rect): Array<IntArray> {
         val board = Array(8) { IntArray(8) }
+
+        // Clamp rect to bitmap bounds to avoid OOB and empty samples
+        val clamped = Rect(
+            boardRect.left.coerceIn(0, bitmap.width),
+            boardRect.top.coerceIn(0, bitmap.height),
+            boardRect.right.coerceIn(0, bitmap.width),
+            boardRect.bottom.coerceIn(0, bitmap.height)
+        )
+        if (clamped.width() < 8 || clamped.height() < 8) {
+            return board // too small or invalid; return empty board rather than crash
+        }
         
-        val cellWidth = boardRect.width() / 8f
-        val cellHeight = boardRect.height() / 8f
+        val cellWidth = clamped.width() / 8f
+        val cellHeight = clamped.height() / 8f
         
         for (row in 0 until 8) {
             for (col in 0 until 8) {
-                val centerX = (boardRect.left + (col + 0.5f) * cellWidth).toInt()
-                val centerY = (boardRect.top + (row + 0.5f) * cellHeight).toInt()
+                val centerX = (clamped.left + (col + 0.5f) * cellWidth).toInt()
+                val centerY = (clamped.top + (row + 0.5f) * cellHeight).toInt()
                 
                 // Sample center and a few points around it
                 val samples = mutableListOf<Int>()
@@ -36,18 +47,22 @@ object BoardExtractor {
                     }
                 }
                 
-                // Calculate average brightness
-                var totalBrightness = 0f
-                for (pixel in samples) {
-                    val r = Color.red(pixel)
-                    val g = Color.green(pixel)
-                    val b = Color.blue(pixel)
-                    totalBrightness += (r + g + b) / 3f
+                if (samples.isEmpty()) {
+                    board[row][col] = 0
+                } else {
+                    // Calculate average brightness
+                    var totalBrightness = 0f
+                    for (pixel in samples) {
+                        val r = Color.red(pixel)
+                        val g = Color.green(pixel)
+                        val b = Color.blue(pixel)
+                        totalBrightness += (r + g + b) / 3f
+                    }
+                    val avgBrightness = totalBrightness / samples.size
+                    
+                    // Use adaptive threshold: cells with low brightness are filled
+                    board[row][col] = if (avgBrightness < 128) 1 else 0
                 }
-                val avgBrightness = totalBrightness / samples.size
-                
-                // Use adaptive threshold: cells with low brightness are filled
-                board[row][col] = if (avgBrightness < 128) 1 else 0
             }
         }
         

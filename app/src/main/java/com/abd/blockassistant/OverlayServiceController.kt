@@ -35,10 +35,14 @@ object OverlayServiceController {
             override fun run() {
                 if (!running) return
                 ScreenCaptureHelper.captureScreen(context) { bmp ->
-                    if (bmp != null) {
-                        val board = BoardExtractor.extractBoard8x8Adaptive(bmp, boardRect)
-                        val (placements, cleared) = Solver.computeGreedyBestCells(board, 3)
-                        updateOverlay(context, placements, cleared)
+                    try {
+                        if (bmp != null) {
+                            val board = BoardExtractor.extractBoard8x8Adaptive(bmp, boardRect)
+                            val (placements, cleared) = Solver.computeGreedyBestCells(board, 3)
+                            updateOverlay(context, placements, cleared)
+                        }
+                    } catch (t: Throwable) {
+                        android.util.Log.e("OverlayLoop", "analyze tick error", t)
                     }
                 }
                 handler.postDelayed(this, intervalMs)
