@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Block Assistant</string>
+    <string name="btn_calibrate">Calibrate</string>
+    <string name="btn_start_overlay">Start Overlay</string>
+    <string name="btn_analyze">Analyze / Update</string>
+    <string name="status_ready">Ready</string>
+    <string name="status_calibrating">Calibrating...</string>
+    <string name="status_overlay_running">Overlay Running</string>
+    <string name="status_analyzing">Analyzing...</string>
+    <string name="overlay_notification_title">Block Assistant Overlay</string>
+    <string name="overlay_notification_text">Overlay is active</string>
+    <string name="overlay_channel_name">Overlay Service</string>
+    <string name="overlay_channel_desc">Notification for overlay service</string>
+    <string name="permission_overlay_required">Overlay permission required</string>
+    <string name="calibrator_title">Calibrator</string>
+    <string name="calibrator_instructions">Select board rect, then 3 piece rects</string>
+    <string name="calibrator_done">Done</string>
+</resources>
