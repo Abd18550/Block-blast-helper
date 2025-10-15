@@ -67,11 +67,19 @@ class OverlayView(context: Context) : View(context) {
         super.onDraw(canvas)
         
         val board = boardRect ?: return
+
+        // Outline board area for visual alignment
+        val outlinePaint = Paint().apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+            color = Color.argb(120, 0, 255, 0)
+        }
+        canvas.drawRect(board, outlinePaint)
         
         val cellWidth = board.width() / 8f
         val cellHeight = board.height() / 8f
         
-        // Draw grid
+    // Draw grid
         for (i in 0..8) {
             val x = board.left + i * cellWidth
             val y = board.top + i * cellHeight

@@ -4,6 +4,7 @@
     <string name="btn_calibrate">Calibrate</string>
     <string name="btn_start_overlay">Start Overlay</string>
     <string name="btn_analyze">Analyze / Update</string>
+    <string name="btn_start_auto">Start (Overlay + Auto-Analyze)</string>
     <string name="status_ready">Ready</string>
     <string name="status_calibrating">Calibrating...</string>
     <string name="status_overlay_running">Overlay Running</string>

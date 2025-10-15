@@ -28,6 +28,7 @@ class OverlayService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (overlayView == null) {
             overlayView = OverlayView(this)
+            OverlayServiceAccessor.overlayView = overlayView
             
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -56,6 +57,7 @@ class OverlayService : Service() {
             windowManager.removeView(it)
             overlayView = null
         }
+        OverlayServiceAccessor.overlayView = null
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
