@@ -130,8 +130,8 @@ class MainActivity : AppCompatActivity() {
         if (!ScreenCaptureHelper.hasMediaProjection()) {
             ScreenCaptureHelper.requestMediaProjection(this, REQUEST_SCREEN_CAPTURE)
         } else {
-            // Start periodic analysis right away
-            OverlayServiceController.startAnalyzeLoop(applicationContext)
+            // Ensure calibration exists and then start periodic analysis
+            ensureCalibrationThenStartLoop()
         }
 
         // Try to launch the Block Blast game
@@ -155,6 +155,31 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Could not find Block Blast app. Open it manually.", Toast.LENGTH_LONG).show()
     }
 
+    private fun ensureCalibrationThenStartLoop() {
+        val prefs = getSharedPreferences("calibration", MODE_PRIVATE)
+        val hasBoard = prefs.getInt("board_left", -1) != -1
+        if (hasBoard) {
+            OverlayServiceController.startAnalyzeLoop(applicationContext)
+            return
+        }
+        statusText.text = "Auto-calibrating..."
+        ScreenCaptureHelper.captureScreen(this) { bmp ->
+            if (bmp != null) {
+                val ok = AutoCalibrator.autoCalibrateAndSave(applicationContext, bmp)
+                runOnUiThread {
+                    if (ok) {
+                        statusText.text = "Calibration detected"
+                        OverlayServiceController.startAnalyzeLoop(applicationContext)
+                    } else {
+                        statusText.text = "Auto-calibration failed. Use Calibrate."
+                    }
+                }
+            } else {
+                runOnUiThread { statusText.text = "Capture failed for calibration" }
+            }
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         
@@ -165,7 +190,7 @@ class MainActivity : AppCompatActivity() {
                         startOverlay()
                         // If startEverything was pressed, continue with capture loop
                         if (ScreenCaptureHelper.hasMediaProjection()) {
-                            OverlayServiceController.startAnalyzeLoop(this)
+                            ensureCalibrationThenStartLoop()
                         } else {
                             ScreenCaptureHelper.requestMediaProjection(this, REQUEST_SCREEN_CAPTURE)
                         }
@@ -175,8 +200,8 @@ class MainActivity : AppCompatActivity() {
             REQUEST_SCREEN_CAPTURE -> {
                 if (resultCode == Activity.RESULT_OK && data != null) {
                     ScreenCaptureHelper.onMediaProjectionResult(resultCode, data)
-                    // If overlay is running, begin loop; else just one-shot analyze
-                    OverlayServiceController.startAnalyzeLoop(applicationContext)
+                    // If overlay is running, try auto-calibration then begin loop
+                    ensureCalibrationThenStartLoop()
                 }
             }
             REQUEST_CALIBRATE -> {
